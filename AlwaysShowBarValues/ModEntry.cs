@@ -30,6 +30,8 @@ namespace YourProjectName
             {"Red", new Color(190, 0, 0) },
             {"Blue", new Color(0, 130, 255) }
         };
+        /// <summary>Whether the box with values should be drawn on screen</summary>
+        private bool ShouldDraw = true;
 
         /*********
         ** Public methods
@@ -40,8 +42,10 @@ namespace YourProjectName
         {
             this.Config = this.Helper.ReadConfig<ModConfig>();
             string position = this.Config.Position;
+            helper.Events.Display.RenderingHud += this.OnRenderingHud;
             helper.Events.Display.RenderedHud += this.OnRenderedHud;
             helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
+            helper.Events.Input.ButtonsChanged += this.OnButtonsChanged;
         }
 
 
@@ -60,6 +64,20 @@ namespace YourProjectName
                 mod: this.ModManifest,
                 reset: () => this.Config = new ModConfig(),
                 save: () => this.Helper.WriteConfig(this.Config)
+            );
+            configMenu.AddBoolOption(
+                mod: this.ModManifest,
+                name: () => "Show above HUD",
+                tooltip: () => "Check this to show the box above all HUD elements, leave unchecked to show it below everything.",
+                getValue: () => this.Config.Above,
+                setValue: value => this.Config.Above = value
+            );
+            configMenu.AddKeybindList(
+                mod: this.ModManifest,
+                name: () => "Toggle key",
+                tooltip: () => "Press the toggle key to show or hide the box with values. The box will not show if the rest of the HUD is hidden.",
+                getValue: () => this.Config.ToggleKey,
+                setValue: value => this.Config.ToggleKey = value
             );
             configMenu.AddTextOption(
                 mod: this.ModManifest,
@@ -98,17 +116,28 @@ namespace YourProjectName
             );
         }
 
+        /// <summary>Whenever the HUD is rendering, render the health/stamina values as well.</summary>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event data.</param>
+        private void OnRenderingHud(object? sender, RenderingHudEventArgs e)
+        {
+            if (Config.Above) return;
+            this.Draw(e.SpriteBatch, Game1.player.Stamina, Game1.player.MaxStamina, Game1.player.health, Game1.player.maxHealth);
+        }
+
         /// <summary>Whenever the HUD is rendered, render the health/stamina values as well.</summary>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event data.</param>
         private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
         {
-            // ignore if player hasn't loaded a save yet
-            if (!Context.IsWorldReady)
-                return;
+            if (!Config.Above) return;
             this.Draw(e.SpriteBatch, Game1.player.Stamina, Game1.player.MaxStamina, Game1.player.health, Game1.player.maxHealth);
         }
 
+        private void OnButtonsChanged(object? sender, ButtonsChangedEventArgs e)
+        {
+            if (this.Config.ToggleKey.JustPressed()) ShouldDraw = !ShouldDraw;
+        }
 
         /// <summary>Get the box's position according to the player's chosen preset, if any, or their overriden X and Y values.</summary>
         /// <param name="messageWidth">The width of the longest string between stamina and health values.</param>
@@ -159,6 +188,10 @@ namespace YourProjectName
 
         public void Draw(SpriteBatch b, float currentStamina, int maxStamina, int currentHealth, int maxHealth)
         {
+            // ignore if player hasn't loaded a save yet
+            if (!Context.IsWorldReady) return;
+            // ignore if the HUD or box is hidden
+            if (!Game1.displayHUD || !ShouldDraw) return;
             string staminaValue = new((int)Math.Max(0f, currentStamina) + "/" + maxStamina);
             string healthValue = new((int)Math.Max(0f, currentHealth) + "/" + maxHealth);
             float messageWidth = 24f + Math.Max(Game1.smallFont.MeasureString(staminaValue ?? "").X, Game1.smallFont.MeasureString(healthValue ?? "").X);

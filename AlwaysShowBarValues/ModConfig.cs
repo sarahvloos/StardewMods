@@ -1,4 +1,5 @@
-﻿using System;
+﻿using StardewModdingAPI.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +14,7 @@ namespace AlwaysShowBarValues
         public int Y { get; set; } = 0;
         public string HealthColorMode { get; set; } = "Green/Yellow/Red";
         public string StaminaColorMode { get; set; } = "Green/Yellow/Red";
+        public bool Above { get; set; } = true;
+        public KeybindList ToggleKey { get; set; } = KeybindList.Parse("H");
     }
 }

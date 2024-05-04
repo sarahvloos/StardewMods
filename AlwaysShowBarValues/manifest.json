@@ -1,10 +1,10 @@
 {
   "Name": "Always Show Bar Values",
   "Author": "Saah",
-  "Version": "1.0.0",
+  "Version": "1.1.0",
   "Description": "Shows numeric values for health and stamina anytime the bars are visible",
   "UniqueID": "Saah.AlwaysShowBarValues",
   "EntryDll": "AlwaysShowBarValues.dll",
   "MinimumApiVersion": "4.0.0",
-  "UpdateKeys": []
+  "UpdateKeys": [ "nexus:23452" ]
 }
