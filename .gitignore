@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Original SDV Code
+sdvsrc/
+
 # User-specific files
 *.rsuser
 *.suo

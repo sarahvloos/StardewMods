@@ -28,6 +28,17 @@ namespace AlwaysShowBarValues
         /****
         ** Basic options
         ****/
+        /// <summary>Add a section title at the current position in the form.</summary>
+        /// <param name="mod">The mod's manifest.</param>
+        /// <param name="text">The title text shown in the form.</param>
+        /// <param name="tooltip">The tooltip text shown when the cursor hovers on the title, or <c>null</c> to disable the tooltip.</param>
+        void AddSectionTitle(IManifest mod, Func<string> text, Func<string> tooltip = null);
+
+        /// <summary>Add a paragraph of text at the current position in the form.</summary>
+        /// <param name="mod">The mod's manifest.</param>
+        /// <param name="text">The paragraph text to display.</param>
+        void AddParagraph(IManifest mod, Func<string> text);
+
         /// <summary>Add a boolean option at the current position in the form.</summary>
         /// <param name="mod">The mod's manifest.</param>
         /// <param name="getValue">Get the current value from the mod config.</param>
