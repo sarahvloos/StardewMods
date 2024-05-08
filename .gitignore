@@ -6,6 +6,9 @@
 # Original SDV Code
 sdvsrc/
 
+# Secret project I can't divulge yet
+SecretProject/
+
 # User-specific files
 *.rsuser
 *.suo

@@ -5,6 +5,7 @@ using StardewModdingAPI;
 using StardewModdingAPI.Utilities;
 using StardewValley;
 
+#pragma warning disable CS8625
 namespace AlwaysShowBarValues
 {
     /// <summary>The API which lets other mods add a config UI through Generic Mod Config Menu.</summary>
@@ -85,3 +86,4 @@ namespace AlwaysShowBarValues
 
     }
 }
+#pragma warning restore CS8625
