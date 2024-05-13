@@ -9,93 +9,79 @@ using StardewValley;
 using Microsoft.Xna.Framework;
 using StardewValley.Extensions;
 using StardewValley.Menus;
+using AlwaysShowBarValues.Config;
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using AlwaysShowBarValues.UIElements;
 
 
 namespace AlwaysShowBarValues
 {
-    public class Drawer
+    internal static class Drawer
     {
-        private readonly ModConfig Config;
-
-        public Drawer(ModConfig config)
+        /// <summary>Handles drawing for all available boxes, including our main one's</summary>
+        /// <param name="spriteBatch">The sprite batch this should be drawn with</param>
+        /// <param name="boxes">A list of all available boxes</param>
+        /// <param name="isTopLayer">Whether this sprite batch is in the top or bottom layer of the HUD</param>
+        internal static void DrawAllBoxes(SpriteBatch spriteBatch, List<StatBox> boxes, bool isTopLayer)
         {
-            Config = config;
+            foreach (StatBox box in boxes) if (ShouldDraw(box, isTopLayer)) Draw(spriteBatch, box);
         }
 
-        public void DrawHealthStamina(SpriteBatch b)
+        /// <summary>Draws a box with stat values in it</summary>
+        /// <param name="spriteBatch">The sprite batch this should be drawn with</param>
+        /// <param name="statBox">The box being drawn</param>
+        private static void Draw(SpriteBatch spriteBatch, StatBox statBox)
         {
-            PlayerStat health = Config.GetPlayerStat("Health");
-            PlayerStat stamina = Config.GetPlayerStat("Stamina");
-            health.CurrentValue = (float)Game1.player.health;
-            health.MaxValue = (float)Game1.player.maxHealth;
-            stamina.CurrentValue = (float)Game1.player.Stamina;
-            stamina.MaxValue = (float)Game1.player.MaxStamina;
-            this.Draw(b, health, stamina);
-        }
-
-        /// <summary>Get the box's position according to the player's chosen preset, if any, or their overriden X and Y values.</summary>
-        /// <param name="messageWidth">The width of the longest string between stamina and health values.</param>
-        private Vector2 GetPositionFromConfig(float messageWidth)
-        {
-            // If the preset is invalid, use the Bottom Left preset
-            if (Config == null || Config.Position == null) return GetPositionFromPreset("Bottom Left", messageWidth);
-            // If the player selected a custom preset, get a position from their X and Y values
-            if (Config.Position == "Custom") return new Vector2(Config.X, Config.Y);
-            // Get a vector according to the player's selected preset
-            return GetPositionFromPreset(Config.Position, messageWidth);
-        }
-
-        private static Vector2 GetPositionFromPreset(string preset, float messageWidth)
-        {
-            Rectangle tsarea = Game1.graphics.GraphicsDevice.Viewport.GetTitleSafeArea();
-            var res = preset switch
-            {
-                "Bottom Left" => new Vector2(tsarea.Left + 16, tsarea.Bottom - 120),
-                "Center Left" => new Vector2(tsarea.Left + 16, (tsarea.Height / 2) - 66),
-                "Top Left" => new Vector2(tsarea.Left + 16, tsarea.Top + 16),
-                "Top Center" => new Vector2((tsarea.Width / 2) - 96, tsarea.Top + 116),
-                "Center Right" => new Vector2(tsarea.Right - (2 * messageWidth), (tsarea.Height / 2) - 56),
-                "Bottom Right" => new Vector2(tsarea.Right - (2 * messageWidth) - 72, tsarea.Bottom - 120),
-                _ => new Vector2(tsarea.Left + 16, tsarea.Bottom - 120),
-            };
-            if (Game1.uiViewport.Width < 1400)
-            {
-                res.Y -= 48f;
-            }
-            return res;
-        }
-        private void Draw(SpriteBatch b, PlayerStat topStat, PlayerStat bottomStat)
-        {
-            // calculate text dimensions for later
-            float messageWidth = 24f + Math.Max(topStat.StringSize.X, bottomStat.StringSize.X);
-            float messageHeight = topStat.StringSize.Y + bottomStat.StringSize.Y - 8f;
-            // get the chosen position by the player
-            Vector2 itemBoxPosition = GetPositionFromConfig(messageWidth);
-
             // draw background
-            if (Config == null || Config.BoxStyle == "Round") DrawRoundBackground(b, messageWidth, itemBoxPosition);
-            else if (Config.BoxStyle == "Toolbar") DrawToolbarBackground(b, messageWidth, messageHeight, itemBoxPosition);
-
-            // adjust position to draw the top stat
-            itemBoxPosition.Y += 28f;
-            itemBoxPosition.X += 48f;
-
-            this.DrawStat(b, topStat, itemBoxPosition);
-            itemBoxPosition.Y += topStat.StringSize.Y - 8f;
-            this.DrawStat(b, bottomStat, itemBoxPosition);
+            if (statBox.BoxStyle is null || statBox.BoxStyle == "Round") DrawRoundBackground(spriteBatch, statBox.MessageSize.X, statBox.BoxPosition);
+            else if (statBox.BoxStyle == "Toolbar") DrawToolbarBackground(spriteBatch, statBox.MessageSize.X, statBox.MessageSize.Y, statBox.BoxPosition);
+            // draw text
+            DrawStat(spriteBatch, statBox, new Vector2(48f, 28f), true);
+            DrawStat(spriteBatch, statBox, new Vector2(48f, statBox.TopValue.MaxStringSize.Y + 20f), false);
         }
 
-        private void DrawStat(SpriteBatch b, PlayerStat stat, Vector2 itemBoxPosition)
+        /// <summary>Decides whether there is anything to be drawn, or whether it should be drawn at all.</summary>
+        /// <param name="statBox">The box to be drawn</param>
+        /// <param name="isTopLayer">Whether it'll be drawn on the HUD's top layer or the bottom one.</param>
+        /// <returns></returns>
+        private static bool ShouldDraw(StatBox statBox, bool isTopLayer)
         {
-            // icon
-            b.Draw(Game1.mouseCursors, itemBoxPosition + new Vector2(-12f, 16f), stat.IconSourceRectangle, Color.White * 1f, 0f, new Vector2(8f, 8f), stat.IconScale, SpriteEffects.None, 1f);
-            // draw bottom string
-            if (Config == null || Config.TextShadow)
-                Utility.drawTextWithShadow(b, stat.StatusString, Game1.smallFont, itemBoxPosition, stat.GetTextColor(), 1f, 1f, -1, -1, 1f);
-            else
-                b.DrawString(Game1.smallFont, stat.StatusString, itemBoxPosition, stat.GetTextColor());
+            // Is the box valid?
+            if (statBox is null || !statBox.IsValid) return false;
+            // Should I be drawing it at all?
+            if (!statBox.ShouldDraw || statBox.Above != isTopLayer) return false;
+            // Are its stats valid?
+            if (!statBox.UpdateCurrentStats()) return false;
+            // Is everything working as intended?
+            if (!statBox.IsValid || statBox.TopValue is null || statBox.BottomValue is null) return false;
+            return true;
         }
 
+        /// <summary>Draws a stat's information inside the box.</summary>
+        /// <param name="b">The sprite batch this should be drawn with</param>
+        /// <param name="statBox">The box this stat is being drawn on</param>
+        /// <param name="offset">The offset from the box's starting position</param>
+        /// <param name="isTopStat">Whether this stat is the top or bottom one.</param>
+        private static void DrawStat(SpriteBatch b, StatBox statBox, Vector2 offset, bool isTopStat)
+        {
+            PlayerStat stat = isTopStat ? statBox.TopValue : statBox.BottomValue;
+            Vector2 startingPos = statBox.BoxPosition + offset;
+            // icon
+            Vector2 iconPosition = statBox.IconsLeftOfString ? startingPos + stat.Offset + new Vector2(-12f, 16f) : startingPos + stat.Offset + new Vector2(stat.MaxStringSize.X - 8f, 16f);
+            b.Draw(Game1.mouseCursors, iconPosition, stat.IconSourceRectangle, Color.White * 1f, 0f, new Vector2(8f, 8f), stat.IconScale, SpriteEffects.None, 1f);
+            Vector2 textPosition = statBox.IconsLeftOfString ? startingPos : startingPos + new Vector2(-16f, 0f);
+            // draw bottom string
+            if (statBox.TextShadow)
+                Utility.drawTextWithShadow(b, stat.StatusString, Game1.smallFont, textPosition, stat.GetTextColor(), 1f, 1f, -1, -1, 1f);
+            else
+                b.DrawString(Game1.smallFont, stat.StatusString, textPosition, stat.GetTextColor());
+        }
+
+        /// <summary>Draws the background of a box, in case it should be round.</summary>
+        /// <param name="b">The sprite batch this should be drawn with</param>
+        /// <param name="messageWidth">The width of the text to be drawn inside the box</param>
+        /// <param name="itemBoxPosition">The box's starting position</param>
         private static void DrawRoundBackground(SpriteBatch b, float messageWidth, Vector2 itemBoxPosition)
         {
             // left rounded corners
@@ -106,9 +92,13 @@ namespace AlwaysShowBarValues
             b.Draw(Game1.mouseCursors, new Vector2(itemBoxPosition.X + 24f + messageWidth, itemBoxPosition.Y), new Rectangle(323, 360, 6, 24), Color.White * 1f, 0f, Vector2.Zero, 4.5f, SpriteEffects.None, 1f);
         }
 
+        /// <summary>Draws the background of a box, in case it should match the toolbar.</summary>
+        /// <param name="b">The sprite batch this should be drawn with</param>
+        /// <param name="messageWidth">The width of the text to be drawn inside the box</param>
+        /// <param name="itemBoxPosition">The box's starting position</param>
         private static void DrawToolbarBackground(SpriteBatch b, float messageWidth, float messageHeight, Vector2 itemBoxPosition)
-        {
-            IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), (int)itemBoxPosition.X + 10, (int)itemBoxPosition.Y + 6, (int)messageWidth + 32, (int)messageHeight + 36, Color.White, 1f, drawShadow: false);
-        }
+            {
+                IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), (int)itemBoxPosition.X + 10, (int)itemBoxPosition.Y + 6, (int)messageWidth + 32, (int)messageHeight + 36, Color.White, 1f, drawShadow: false);
+            }
     }
 }

@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using AlwaysShowBarValues.Config;
+using AlwaysShowBarValues.Integrations;
+using AlwaysShowBarValues.UIElements;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -22,9 +26,8 @@ namespace AlwaysShowBarValues
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         private ModConfig Config;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        /// <summary>Whether the box with values should be drawn on screen</summary>
-        private bool ShouldDraw = true;
-        private Drawer? Drawer;
+        /// <summary>This will help register config options to GenericModConfigMenu</summary>
+        private GenericModConfigMenuRegistry? ConfigRegistry;
 
         /*********
         ** Public methods
@@ -34,8 +37,6 @@ namespace AlwaysShowBarValues
         public override void Entry(IModHelper helper)
         {
             this.Config = this.Helper.ReadConfig<ModConfig>();
-            this.Drawer = new Drawer(this.Config);
-            string position = this.Config.Position;
             helper.Events.Display.RenderingHud += this.OnRenderingHud;
             helper.Events.Display.RenderedHud += this.OnRenderedHud;
             helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
@@ -52,142 +53,33 @@ namespace AlwaysShowBarValues
         /// <param name="e">The event data.</param>
         private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
         {
+            // Create all available boxes, according to which mods the player has
+            this.LoadAllBoxes();
+            // Create a Generic Mod Config Menu menu for the mod
             var configMenu = this.Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
             if (configMenu is null) return;
+            // Register this mod on GMCM
             configMenu.Register(
                 mod: this.ModManifest,
                 reset: () => this.Config = new ModConfig(),
                 save: () => this.Helper.WriteConfig(this.Config)
             );
-            configMenu.AddSectionTitle(
-                mod: this.ModManifest,
-                text: () => "Visibility"
-            );
-            configMenu.AddBoolOption(
-                mod: this.ModManifest,
-                name: () => "Show above HUD",
-                tooltip: () => "Check this to show the box above all HUD elements, leave unchecked to show it below everything.",
-                getValue: () => this.Config.Above,
-                setValue: value => this.Config.Above = value
-            );
-            configMenu.AddKeybindList(
-                mod: this.ModManifest,
-                name: () => "Toggle key",
-                tooltip: () => "Press the toggle key to show or hide the box with values. The box will not show if the rest of the HUD is hidden.",
-                getValue: () => this.Config.ToggleKey,
-                setValue: value => this.Config.ToggleKey = value
-            );
-            configMenu.AddSectionTitle(
-                mod: this.ModManifest,
-                text: () => "Position"
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Bar Value Position",
-                getValue: () => this.Config.Position,
-                setValue: value => this.Config.Position = value,
-                allowedValues: new string[] { "Bottom Left", "Center Left", "Top Left", "Top Center", "Bottom Right", "Center Right", "Custom" }
-            );
-            configMenu.AddNumberOption(
-                mod: this.ModManifest,
-                name: () => "Override X Position",
-                tooltip: () => "Choose 'Custom' as your bar value position, then change the horizontal position here.",
-                getValue: () => this.Config.X,
-                setValue: value => this.Config.X = value
-            );
-            configMenu.AddNumberOption(
-                mod: this.ModManifest,
-                name: () => "Override Y Position",
-                tooltip: () => "Choose 'Custom' as your bar value position, then change the horizontal position here.",
-                getValue: () => this.Config.Y,
-                setValue: value => this.Config.Y = value
-            );
-            configMenu.AddSectionTitle(
-                mod: this.ModManifest,
-                text: () => "Background"
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Box Style",
-                getValue: () => this.Config.BoxStyle,
-                setValue: value => this.Config.BoxStyle = value,
-                allowedValues: new string[] { "Round", "Toolbar", "None" }
-            );
-            configMenu.AddSectionTitle(
-                mod: this.ModManifest,
-                text: () => "Text"
-            );
-            configMenu.AddBoolOption(
-                mod: this.ModManifest,
-                name: () => "Add Shadow to Text",
-                tooltip: () => "Whether you want the text to have a shadow underneath.",
-                getValue: () => this.Config.TextShadow,
-                setValue: value => this.Config.TextShadow = value
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Health Text Color Scheme",
-                getValue: () => this.Config.HealthColorMode,
-                setValue: value => this.Config.HealthColorMode = value,
-                allowedValues: new string[] { "Black", "Green/Yellow/Red", "Blue/Yellow/Red", "Blue/Black/Red", "Custom" }
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Stamina Text Color Scheme",
-                getValue: () => this.Config.StaminaColorMode,
-                setValue: value => this.Config.StaminaColorMode = value,
-                allowedValues: new string[] { "Black", "Green/Yellow/Red", "Blue/Yellow/Red", "Blue/Black/Red", "Custom" }
-            );
-            configMenu.AddSectionTitle(
-                mod: this.ModManifest,
-                text: () => "Custom Text Colors"
-            );
-            configMenu.AddParagraph(
-                mod: this.ModManifest,
-                text: () => "The following settings only work if you selected Custom as the color scheme for the text you're trying to edit. Colors must be a hex code (like 00ff00). Reshades will affect the color you choose."
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Full Health Color Override",
-                tooltip: () => "What color should the health text be when you're at full health?",
-                getValue: () => this.Config.MaxHealthHex,
-                setValue: value => this.Config.MaxHealthHex = value
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Half Health Color Override",
-                tooltip: () => "What color should the health text be when you're at half health?",
-                getValue: () => this.Config.MiddleHealthHex,
-                setValue: value => this.Config.MiddleHealthHex = value
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Zero Health Color Override",
-                tooltip: () => "What color should the health text be when you're at zero health?",
-                getValue: () => this.Config.MinHealthHex,
-                setValue: value => this.Config.MinHealthHex = value
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Full Stamina Color Override",
-                tooltip: () => "What color should the stamina text be when you're at full stamina?",
-                getValue: () => this.Config.MaxStaminaHex,
-                setValue: value => this.Config.MaxStaminaHex = value
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Half Stamina Color Override",
-                tooltip: () => "What color should the stamina text be when you're at half stamina?",
-                getValue: () => this.Config.MiddleStaminaHex,
-                setValue: value => this.Config.MiddleStaminaHex = value
-            );
-            configMenu.AddTextOption(
-                mod: this.ModManifest,
-                name: () => "Zero Stamina Color Override",
-                tooltip: () => "What color should the stamina text be when you're at zero stamina?",
-                getValue: () => this.Config.MinStaminaHex,
-                setValue: value => this.Config.MinStaminaHex = value
-            );
+            // Creates a new instance of the class that adds configuration options to GMCM
+            ConfigRegistry = new(this.Config, this.ModManifest, configMenu);
+            // Registers all available options to GMCM
+            ConfigRegistry.RegisterAll(this.Config.GetStatBoxes());
+
+        }
+
+        /// <summary>Decides whether drawing on the HUD is allowed at that moment.</summary>
+        /// <returns>Whether drawing on the HUD is advisable</returns>
+        private static bool ShouldDrawOnHud()
+        {
+            // Shouldn't draw any stats if the player hasn't loaded a save yet
+            if (!Context.IsWorldReady) return false;
+            // Shouldn't draw anything on the HUD if it's hidden
+            if (Game1.game1.takingMapScreenshot || !Game1.displayHUD) return false;
+            return true;
         }
 
         /// <summary>Whenever the HUD is rendering, render the health/stamina values as well.</summary>
@@ -195,8 +87,7 @@ namespace AlwaysShowBarValues
         /// <param name="e">The event data.</param>
         private void OnRenderingHud(object? sender, RenderingHudEventArgs e)
         {
-            if (Config.Above) return;
-            Drawer.DrawHealthStamina(e.SpriteBatch);
+            if (ShouldDrawOnHud()) Drawer.DrawAllBoxes(spriteBatch: e.SpriteBatch, boxes: this.Config.GetStatBoxes(), isTopLayer: false);
         }
 
         /// <summary>Whenever the HUD is rendered, render the health/stamina values as well.</summary>
@@ -204,17 +95,35 @@ namespace AlwaysShowBarValues
         /// <param name="e">The event data.</param>
         private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
         {
-            if (!Config.Above) return;
-            // ignore if player hasn't loaded a save yet
-            if (!Context.IsWorldReady) return;
-            // ignore if the HUD or box is hidden
-            if (Game1.game1.takingMapScreenshot || !Game1.displayHUD || !ShouldDraw) return;
-            Drawer.DrawHealthStamina(e.SpriteBatch);
+            if (ShouldDrawOnHud()) Drawer.DrawAllBoxes(spriteBatch: e.SpriteBatch, boxes: this.Config.GetStatBoxes(), isTopLayer: true);
         }
 
+        /// <summary>whenever the player presses a button, check if it was one of our registered keybinds</summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void OnButtonsChanged(object? sender, ButtonsChangedEventArgs e)
         {
-            if (this.Config.ToggleKey.JustPressed()) ShouldDraw = !ShouldDraw;
+            foreach (StatBox box in this.Config.GetStatBoxes()) box.TryToggleShouldDraw();
+        }
+
+        /// <summary>Gets the mod instance of an existing mod.</summary>
+        /// <param name="modInfo">The target mod's metadata.</param>
+        /// <returns>The target mod's instance.</returns>
+        private static Mod? GetModFromInfo (IModInfo modInfo)
+        {
+            if (modInfo is null) return null;
+            if (modInfo.GetType() is not Type modInfoType) return null;
+            if (modInfoType.GetProperty("Mod") is not PropertyInfo modPropertyInfo) return null;
+            if (modPropertyInfo.GetValue(modInfo) is not object mod) return null;
+            return (Mod)mod;
+        }
+
+        /// <summary>Creates StatBox instances for each box we're able to draw</summary>
+        private void LoadAllBoxes()
+        {
+            // Survivalistic - Continued
+            if (this.Helper.ModRegistry.Get("Ophaneom.Survivalistic") is IModInfo survivalisticModInfo && GetModFromInfo(survivalisticModInfo) is Mod survivalisticMod)
+                this.Config.AddInstanceToMod("Survivalistic", survivalisticMod);
         }
     }
 }
