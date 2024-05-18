@@ -77,6 +77,8 @@ namespace AlwaysShowBarValues
         {
             // Shouldn't draw any stats if the player hasn't loaded a save yet
             if (!Context.IsWorldReady) return false;
+            // Shouldn't draw anything on the HUD if an event is happening
+            if (Game1.gameMode != 3 || Game1.freezeControls || Game1.panMode) return false;
             // Shouldn't draw anything on the HUD if it's hidden
             if (Game1.game1.takingMapScreenshot || !Game1.displayHUD) return false;
             return true;
