@@ -38,6 +38,13 @@ namespace AlwaysShowBarValues.Config
             );
             this.ConfigMenu.AddBoolOption(
                 mod: this.ModManifest,
+                name: () => "Enable box",
+                tooltip: () => "This box will not be visible unless this is checked.",
+                getValue: () => (bool)this.GetConfig(predicate, "Enabled"),
+                setValue: value => this.SetConfig(predicate, "Enabled", value)
+            );
+            this.ConfigMenu.AddBoolOption(
+                mod: this.ModManifest,
                 name: () => "Show above HUD",
                 tooltip: () => "Check this to show the box above all HUD elements, leave unchecked to show it below everything.",
                 getValue: () => (bool)this.GetConfig(predicate, "Above"),

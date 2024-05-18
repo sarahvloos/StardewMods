@@ -50,7 +50,7 @@ namespace AlwaysShowBarValues
             // Is the box valid?
             if (statBox is null || !statBox.IsValid) return false;
             // Should I be drawing it at all?
-            if (!statBox.ShouldDraw || statBox.Above != isTopLayer) return false;
+            if (!statBox.Enabled || statBox.IsHidden || !statBox.ShouldDraw || statBox.Above != isTopLayer) return false;
             // Are its stats valid?
             if (!statBox.UpdateCurrentStats()) return false;
             // Is everything working as intended?

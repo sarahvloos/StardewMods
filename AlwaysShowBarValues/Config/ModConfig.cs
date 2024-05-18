@@ -16,7 +16,14 @@ namespace AlwaysShowBarValues.Config
             {"Survivalistic", new SurvivalisticIntegration() }
         };
 
-        public string BoxStyle {
+        public bool Enabled
+        {
+            get { return StatBoxes["main"].Enabled; }
+            set { StatBoxes["main"].Enabled = value; }
+        }
+
+        public string BoxStyle
+        {
             get { return StatBoxes["main"].BoxStyle; }
             set { StatBoxes["main"].BoxStyle = value; }
         }
@@ -100,7 +107,11 @@ namespace AlwaysShowBarValues.Config
         }
 
         // Survivalistic
-
+        public bool SurvivalisticEnabled
+        {
+            get { return StatBoxes["main"].Enabled; }
+            set { StatBoxes["main"].Enabled = value; }
+        }
         public string SurvivalisticBoxStyle
         {
             get { return StatBoxes["Survivalistic"]?.BoxStyle ?? "Round"; }

@@ -20,8 +20,12 @@ namespace AlwaysShowBarValues.UIElements
         internal string BoxName { get; set; }
         /// <summary>Whether this box is valid and should be drawn, added to settings, etc.</summary>
         internal bool IsValid { get; set; } = false;
+        /// <summary>A disabled box will never be drawn.</summary>
+        internal bool Enabled { get; set; } = true;
         /// <summary>Whether this box should be drawn, regardless of validity.</summary>
         internal bool ShouldDraw { get; set; } = true;
+        /// <summary>Whether this box is semi-permanently hidden</summary>
+        internal bool IsHidden { get; set; } = false;
         /// <summary>The keys pressed by the user to toggle this box's visibility.</summary>
         internal KeybindList ToggleKey { get; set; }
 
