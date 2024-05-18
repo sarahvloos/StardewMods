@@ -109,8 +109,8 @@ namespace AlwaysShowBarValues.Config
         // Survivalistic
         public bool SurvivalisticEnabled
         {
-            get { return StatBoxes["main"].Enabled; }
-            set { StatBoxes["main"].Enabled = value; }
+            get { return StatBoxes["Survivalistic"].Enabled; }
+            set { StatBoxes["Survivalistic"].Enabled = value; }
         }
         public string SurvivalisticBoxStyle
         {
